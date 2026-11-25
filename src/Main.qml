@@ -903,23 +903,44 @@ ApplicationWindow {
                                             }
                                         }
 
-                                        Rectangle {
-                                            color: modelData.isBound ? (rebindAppHover.hovered ? "#2a2a34" : "#22222a") : theme.accent
-                                            border.color: modelData.isBound ? "#343440" : "transparent"
-                                            border.width: modelData.isBound ? 1 : 0
-                                            radius: theme.radius
-                                            implicitHeight: 30
-                                            implicitWidth: appBindLbl.implicitWidth + 20
-                                            Label {
-                                                id: appBindLbl
-                                                anchors.centerIn: parent
-                                                text: modelData.isBound ? qsTr("Rebind") : qsTr("Bind")
-                                                font.pixelSize: 12
-                                                font.weight: modelData.isBound ? Font.Normal : Font.DemiBold
-                                                color: modelData.isBound ? "#d4d4dc" : theme.accentForeground
+                                        RowLayout {
+                                            spacing: 6
+                                            Rectangle {
+                                                visible: modelData.isBound
+                                                color: appUnbindHover.hovered ? "#3a2024" : "#22222a"
+                                                border.color: appUnbindHover.hovered ? "#7a363c" : "#343440"
+                                                border.width: 1
+                                                radius: theme.radius
+                                                implicitHeight: 30
+                                                implicitWidth: appUnbindLbl.implicitWidth + 18
+                                                Label {
+                                                    id: appUnbindLbl
+                                                    anchors.centerIn: parent
+                                                    text: qsTr("Unbind")
+                                                    font.pixelSize: 12
+                                                    color: appUnbindHover.hovered ? "#ffadb3" : "#d4d4dc"
+                                                }
+                                                HoverHandler { id: appUnbindHover; cursorShape: Qt.PointingHandCursor }
+                                                TapHandler { onTapped: backend.unbindKey(modelData.boundCombo) }
                                             }
-                                            HoverHandler { id: rebindAppHover; cursorShape: Qt.PointingHandCursor }
-                                            TapHandler { onTapped: win.openBindDialog(modelData.suggestedCombo, modelData.name, modelData.command, true) }
+                                            Rectangle {
+                                                color: modelData.isBound ? (rebindAppHover.hovered ? "#2a2a34" : "#22222a") : theme.accent
+                                                border.color: modelData.isBound ? "#343440" : "transparent"
+                                                border.width: modelData.isBound ? 1 : 0
+                                                radius: theme.radius
+                                                implicitHeight: 30
+                                                implicitWidth: appBindLbl.implicitWidth + 20
+                                                Label {
+                                                    id: appBindLbl
+                                                    anchors.centerIn: parent
+                                                    text: modelData.isBound ? qsTr("Rebind") : qsTr("Bind")
+                                                    font.pixelSize: 12
+                                                    font.weight: modelData.isBound ? Font.Normal : Font.DemiBold
+                                                    color: modelData.isBound ? "#d4d4dc" : theme.accentForeground
+                                                }
+                                                HoverHandler { id: rebindAppHover; cursorShape: Qt.PointingHandCursor }
+                                                TapHandler { onTapped: win.openBindDialog(modelData.suggestedCombo, modelData.name, modelData.command, true) }
+                                            }
                                         }
                                     }
                                 }
