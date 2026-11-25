@@ -2,20 +2,32 @@
 
 ![Keys screenshot](screenshot.png)
 
-Manage your Omarchy Hyprland keybindings with smart **bind** and **unbind** recommendations.
+A native Omarchy desktop app for managing Hyprland keybindings with smart **bind** and **unbind** recommendations.
 
 Keys scans your active Hyprland bindings alongside your recent application launch history (last 30 days) and open windows to highlight:
 
 - **Recommended to bind:** Your most-used apps that don't have a shortcut yet, paired with a conflict-free suggested key combo.
-- **Recommended to unbind:** Preinstalled or custom app shortcuts whose apps are not installed or haven't been launched in the last 30 days.
-- **Safe edits:** All changes are written atomically inside a managed block in `~/.config/hypr/bindings.lua` with an automatic backup, `hyprctl configerrors` validation (with rollback on error), and full Undo/Redo.
+- **Recommended to unbind:** Preinstalled or custom app shortcuts whose apps aren't installed or haven't been launched in 30 days.
+- **All Bindings & Apps:** Search every active shortcut (`super s`, `scratchpad`, etc.) to rebind or unbind, or browse and search all installed desktop apps to assign shortcuts with an interactive key recorder.
+- **Safe edits:** All changes are written atomically inside a delimited `-- >>> keys-managed` block in `~/.config/hypr/bindings.lua` with a session backup, `hyprctl configerrors` validation (with automatic rollback on error), and full Undo/Redo.
+- **Omarchy native:** Follows your Omarchy accent color, Hyprland corner rounding, and Omarchy language live (English, Danish, Spanish).
+
+## Install on Omarchy
+
+```sh
+git clone https://github.com/Mojarras7/keys.git
+cd keys
+./bin/install
+```
+
+After installing, open **Keys** from the Omarchy app launcher (`Super + Space`).
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
 | --- | --- |
-| `1` / `2` / `3` | Switch between Recommend, All Bindings, and Most Used |
-| `/` | Search all bindings |
+| `1` / `2` / `3` | Switch between Recommend, All Bindings, and Apps |
+| `/` | Search bindings or installed apps |
 | `N` | Add a new custom shortcut |
 | `Space` | Refresh usage scan |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
@@ -31,10 +43,14 @@ keys scan --json   # Usage stats, bind recommendations, and unbind recommendatio
 keys list --json   # Active bindings and unbound overrides
 ```
 
-## Build & Install
+## Development
 
 ```sh
 ./bin/build     # Compile to build/keys
 ./bin/test      # Run the Qt Test suite offscreen
 ./bin/install   # Package and install with makepkg -fsi
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
