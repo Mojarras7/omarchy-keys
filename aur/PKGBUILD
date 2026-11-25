@@ -4,22 +4,22 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc='Manage Omarchy Hyprland keybindings with smart bind and unbind recommendations'
 arch=('x86_64' 'aarch64')
-url='https://github.com/Mojarras7/keys'
+url='https://github.com/Mojarras7/omarchy-keys'
 license=('MIT')
 depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'xdg-desktop-portal')
 makedepends=('gcc' 'make')
 provides=('keys')
 conflicts=('keys')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('ae9bd72cb097b6291939bae9f1d1842355ac0c3b67a13a6571d8c4ebe31c460e')
+sha256sums=('364b8808825f4bb2f8f1515064ba5c5f222e27ba6a8f77fb184d2808e40cf0c1')
 
 build() {
-  cd "$srcdir/keys-$pkgver"
+  cd "$srcdir/omarchy-keys-$pkgver"
   ./bin/build
 }
 
 package() {
-  cd "$srcdir/keys-$pkgver"
+  cd "$srcdir/omarchy-keys-$pkgver"
   install -Dm755 build/keys "$pkgdir/usr/bin/keys"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 pkgbuild/keys.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/keys.svg"
