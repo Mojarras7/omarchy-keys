@@ -22,33 +22,49 @@ ApplicationWindow {
     property string searchQuery: ""
     property string appSearchQuery: ""
 
-    function filteredBindings() {
-        var list = backend.bindings
-        var q = searchQuery.trim().toLowerCase()
+    function filteredBindings(list, query) {
+        var q = (query || "").trim().toLowerCase()
         if (!q) return list
-        var out = []
+        var tokens = q.split(/[\s+]+/).filter(function(t) { return t.length > 0 })
+        var normQuery = tokens.join(" ")
+        var exact = []
+        var rest = []
         for (var i = 0; i < list.length; ++i) {
             var item = list[i]
-            if (item.combo.toLowerCase().indexOf(q) !== -1 ||
-                item.description.toLowerCase().indexOf(q) !== -1) {
-                out.push(item)
+            var comboNorm = item.combo.toLowerCase().replace(/\s*\+\s*/g, " ")
+            if (comboNorm === normQuery) {
+                exact.push(item)
+                continue
             }
+            var hay = comboNorm + " " + item.combo.toLowerCase() + " " + item.description.toLowerCase()
+            var ok = true
+            for (var j = 0; j < tokens.length; ++j) {
+                if (hay.indexOf(tokens[j]) === -1) {
+                    ok = false
+                    break
+                }
+            }
+            if (ok) rest.push(item)
         }
-        return out
+        return exact.concat(rest)
     }
 
-    function filteredApps() {
-        var list = backend.allApps
-        var q = appSearchQuery.trim().toLowerCase()
+    function filteredApps(list, query) {
+        var q = (query || "").trim().toLowerCase()
         if (!q) return list
+        var tokens = q.split(/\s+/).filter(function(t) { return t.length > 0 })
         var out = []
         for (var i = 0; i < list.length; ++i) {
             var item = list[i]
-            if (item.name.toLowerCase().indexOf(q) !== -1 ||
-                item.command.toLowerCase().indexOf(q) !== -1 ||
-                item.id.toLowerCase().indexOf(q) !== -1) {
-                out.push(item)
+            var hay = (item.name + " " + item.command + " " + item.id + " " + item.boundCombo).toLowerCase()
+            var ok = true
+            for (var j = 0; j < tokens.length; ++j) {
+                if (hay.indexOf(tokens[j]) === -1) {
+                    ok = false
+                    break
+                }
             }
+            if (ok) out.push(item)
         }
         return out
     }
@@ -709,7 +725,7 @@ ApplicationWindow {
                         anchors.margins: 12
                         clip: true
                         spacing: 6
-                        model: win.filteredBindings()
+                        model: win.filteredBindings(backend.bindings, win.searchQuery)
 
                         delegate: Item {
                             required property var modelData
@@ -823,7 +839,7 @@ ApplicationWindow {
                             Layout.fillHeight: true
                             clip: true
                             spacing: 8
-                            model: win.filteredApps()
+                            model: win.filteredApps(backend.allApps, win.appSearchQuery)
 
                             delegate: Item {
                                 required property var modelData
