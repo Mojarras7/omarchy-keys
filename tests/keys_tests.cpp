@@ -126,6 +126,30 @@ private slots:
         QCOMPARE(gimp.value("suggestedCombo").toString(), QString("SUPER + SHIFT + G"));
     }
 
+    void unbindingTerminalClearsBoundStateInAllApps()
+    {
+        QTemporaryDir dir;
+        const QString bindingsLua = dir.filePath("bindings.lua");
+        const QString defaultApps = dir.filePath("applications.lua");
+        write(bindingsLua, "");
+        write(defaultApps, "o.bind(\"SUPER + RETURN\", \"Terminal\", o.launch_terminal())\n");
+        write(dir.path() + "/foot.desktop",
+              "[Desktop Entry]\nType=Application\nName=Foot\nExec=foot\n");
+
+        Backend::Config cfg;
+        cfg.bindingsLuaPath = bindingsLua;
+        cfg.defaultAppsLuaPath = defaultApps;
+        cfg.desktopDirs = {dir.path()};
+        cfg.skipSystemCommands = true;
+
+        Backend backend(cfg);
+        backend.refresh();
+        QCOMPARE(backend.allApps().first().toMap().value("isBound").toBool(), true);
+
+        backend.unbindKey("SUPER + RETURN");
+        QCOMPARE(backend.allApps().first().toMap().value("isBound").toBool(), false);
+    }
+
     void themeFallsBack()
     {
         QTemporaryDir dir;

@@ -624,13 +624,16 @@ void Backend::computeRecommendations(QList<BindingEntry> &entries, QList<Desktop
                 app.boundCombo = boundTokenToCombo.value(k);
             }
         }
-        // Treat default browser/terminal/file manager categories as already bound.
+        // Treat default terminal/file manager categories as bound only while
+        // their default shortcut is actually still active in Hyprland.
         const QString binLower = app.binary.toLower();
-        if (!app.isBound && (binLower == "foot" || binLower == "alacritty" || binLower == "kitty" ||
-                             binLower == "ghostty")) {
+        if (!app.isBound && usedCombos.contains("SUPER + RETURN") &&
+            (binLower == "foot" || binLower == "alacritty" || binLower == "kitty" ||
+             binLower == "ghostty")) {
             app.isBound = true;
             app.boundCombo = "SUPER + RETURN";
-        } else if (!app.isBound && (binLower == "nautilus" || app.id.contains("nautilus"))) {
+        } else if (!app.isBound && usedCombos.contains("SUPER + SHIFT + F") &&
+                   (binLower == "nautilus" || app.id.contains("nautilus"))) {
             app.isBound = true;
             app.boundCombo = "SUPER + SHIFT + F";
         }
@@ -912,7 +915,9 @@ void Backend::bindApp(const QString &combo, const QString &description,
     b.description = description.trimmed().isEmpty() ? command.trimmed() : description.trimmed();
     b.command = command.trimmed();
     b.isLaunch = isLaunch;
-    b.isRebind = !findConflict(norm).isEmpty();
+    // Always use o.rebind so any existing default or user binding on the same
+    // chord is cleanly replaced rather than firing two actions at once.
+    b.isRebind = true;
     next.binds.append(b);
 
     applyManagedState(next, true, tr("Bound %1 to %2").arg(norm, b.description));
