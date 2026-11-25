@@ -1,0 +1,6 @@
+{
+  "%n bindings": { "one": "%n binding", "other": "%n bindings" },
+  "%n active apps": { "one": "%n active app", "other": "%n active apps" },
+  "%n launches": { "one": "%n launch", "other": "%n launches" },
+  "Launched %n times in 30 days": { "one": "Launched %n time in 30 days", "other": "Launched %n times in 30 days" }
+}

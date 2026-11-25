@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Keys
+Name[da]=Taster
+Name[es]=Teclas
+Comment=Manage Omarchy keybindings and spot unused or most-used apps
+Comment[da]=Administrer Omarchy-genveje og find ubrugte eller mest brugte apps
+Comment[es]=Administra atajos de Omarchy y detecta apps más usadas o sin uso
+Exec=keys
+Icon=keys
+Terminal=false
+Categories=Utility;Settings;
+StartupWMClass=keys
