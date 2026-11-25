@@ -14,6 +14,22 @@ Keys scans your active Hyprland bindings alongside your recent application launc
 
 ## Install on Omarchy
 
+### From the AUR *(once published)*
+
+```sh
+omarchy pkg aur add omarchy-keys
+```
+
+### From GitHub Releases (precompiled Arch package)
+
+Download `keys-0.1.0-1-x86_64.pkg.tar.zst` from the [latest release](https://github.com/Mojarras7/keys/releases/latest) and install it:
+
+```sh
+sudo pacman -U keys-0.1.0-1-x86_64.pkg.tar.zst
+```
+
+### From source
+
 ```sh
 git clone https://github.com/Mojarras7/keys.git
 cd keys

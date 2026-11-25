@@ -1,0 +1,20 @@
+pkgbase = omarchy-keys
+	pkgdesc = Manage Omarchy Hyprland keybindings with smart bind and unbind recommendations
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/Mojarras7/keys
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = gcc
+	makedepends = make
+	depends = qt6-base
+	depends = qt6-declarative
+	depends = qt6-wayland
+	depends = xdg-desktop-portal
+	provides = keys
+	conflicts = keys
+	source = omarchy-keys-0.1.0.tar.gz::https://github.com/Mojarras7/keys/archive/refs/tags/v0.1.0.tar.gz
+	sha256sums = ae9bd72cb097b6291939bae9f1d1842355ac0c3b67a13a6571d8c4ebe31c460e
+
+pkgname = omarchy-keys
