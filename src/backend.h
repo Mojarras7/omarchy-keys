@@ -66,6 +66,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantList bindings READ bindings NOTIFY changed)
     Q_PROPERTY(QVariantList unboundOverrides READ unboundOverrides NOTIFY changed)
     Q_PROPERTY(QVariantList mostUsedApps READ mostUsedApps NOTIFY changed)
+    Q_PROPERTY(QVariantList allApps READ allApps NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY changed)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY changed)
@@ -93,6 +94,7 @@ public:
     QVariantList bindings() const { return m_bindingsList; }
     QVariantList unboundOverrides() const { return m_unboundList; }
     QVariantList mostUsedApps() const { return m_mostUsedList; }
+    QVariantList allApps() const { return m_allAppsList; }
     bool busy() const { return m_busy; }
     bool canUndo() const { return !m_undoStack.isEmpty(); }
     bool canRedo() const { return !m_redoStack.isEmpty(); }
@@ -162,6 +164,7 @@ private:
     QVariantList m_bindingsList;
     QVariantList m_unboundList;
     QVariantList m_mostUsedList;
+    QVariantList m_allAppsList;
 
     QString m_statusMessage;
     QString m_errorMessage;

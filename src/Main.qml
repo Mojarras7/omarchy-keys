@@ -17,9 +17,10 @@ ApplicationWindow {
     Material.accent: theme.accent
     Material.roundedScale: theme.radius
 
-    property int currentTab: 0 // 0 = Recommend, 1 = All Bindings, 2 = Most Used
+    property int currentTab: 0 // 0 = Recommend, 1 = All Bindings, 2 = Apps
     property bool helpVisible: false
     property string searchQuery: ""
+    property string appSearchQuery: ""
 
     function filteredBindings() {
         var list = backend.bindings
@@ -36,23 +37,49 @@ ApplicationWindow {
         return out
     }
 
+    function filteredApps() {
+        var list = backend.allApps
+        var q = appSearchQuery.trim().toLowerCase()
+        if (!q) return list
+        var out = []
+        for (var i = 0; i < list.length; ++i) {
+            var item = list[i]
+            if (item.name.toLowerCase().indexOf(q) !== -1 ||
+                item.command.toLowerCase().indexOf(q) !== -1 ||
+                item.id.toLowerCase().indexOf(q) !== -1) {
+                out.push(item)
+            }
+        }
+        return out
+    }
+
     function openBindDialog(combo, description, command, isLaunch) {
         keyDialog.openFor(combo, description, command, isLaunch)
     }
 
-    Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: win.helpVisible = !win.helpVisible }
-    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: Qt.quit() }
+    readonly property bool typingInSearch: searchField.activeFocus || appSearchField.activeFocus
+
+    Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: win.helpVisible = !win.helpVisible }
+    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: Qt.quit() }
     Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; onActivated: {
         if (win.helpVisible) win.helpVisible = false
         else if (keyDialog.visible) keyDialog.close()
-        else if (searchField.activeFocus) { searchField.focus = false }
+        else if (searchField.activeFocus) searchField.focus = false
+        else if (appSearchField.activeFocus) appSearchField.focus = false
     }}
-    Shortcut { sequence: "1"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: win.currentTab = 0 }
-    Shortcut { sequence: "2"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: win.currentTab = 1 }
-    Shortcut { sequence: "3"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: win.currentTab = 2 }
-    Shortcut { sequence: "/"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible; onActivated: { win.currentTab = 1; searchField.forceActiveFocus() } }
-    Shortcut { sequence: "N"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: win.openBindDialog("", "", "", true) }
-    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !searchField.activeFocus; onActivated: backend.refresh() }
+    Shortcut { sequence: "1"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: win.currentTab = 0 }
+    Shortcut { sequence: "2"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: win.currentTab = 1 }
+    Shortcut { sequence: "3"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: win.currentTab = 2 }
+    Shortcut { sequence: "/"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible; onActivated: {
+        if (win.currentTab === 2) {
+            appSearchField.forceActiveFocus()
+        } else {
+            win.currentTab = 1
+            searchField.forceActiveFocus()
+        }
+    }}
+    Shortcut { sequence: "N"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: win.openBindDialog("", "", "", true) }
+    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && !win.typingInSearch; onActivated: backend.refresh() }
     Shortcut { sequences: [StandardKey.Undo]; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && backend.canUndo; onActivated: backend.undo() }
     Shortcut { sequences: [StandardKey.Redo]; context: Qt.ApplicationShortcut; enabled: !keyDialog.visible && backend.canRedo; onActivated: backend.redo() }
 
@@ -110,7 +137,7 @@ ApplicationWindow {
                             model: [
                                 { label: qsTr("Recommend"), badge: backend.bindRecommendations.length + backend.unbindRecommendations.length },
                                 { label: qsTr("All Bindings"), badge: backend.totalBindings },
-                                { label: qsTr("Most Used"), badge: backend.trackedAppsCount }
+                                { label: qsTr("Apps"), badge: backend.allApps.length }
                             ]
                             delegate: Rectangle {
                                 required property int index
@@ -756,127 +783,155 @@ ApplicationWindow {
                 }
             }
 
-            // TAB 2: Most Used Apps
-            Rectangle {
+            // TAB 2: Searchable Installed Apps (most used first)
+            ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                spacing: 12
                 visible: win.currentTab === 2
-                color: "#151519"
-                border.color: "#25252d"
-                border.width: 1
-                radius: theme.radius
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 16
-                    spacing: 12
+                TextField {
+                    id: appSearchField
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Search installed apps to bind (/)")
+                    Material.roundedScale: theme.radius
+                    onTextChanged: win.appSearchQuery = text
+                }
 
-                    Label {
-                        text: qsTr("Most-used applications (last 30 days)")
-                        font.pixelSize: 16
-                        font.weight: Font.DemiBold
-                        color: "#f4f4f6"
-                    }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: "#151519"
+                    border.color: "#25252d"
+                    border.width: 1
+                    radius: theme.radius
 
-                    ListView {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        clip: true
-                        spacing: 8
-                        model: backend.mostUsedApps
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
 
-                        delegate: Item {
-                            required property var modelData
-                            width: ListView.view.width
-                            height: 60
+                        Label {
+                            text: qsTr("Installed applications (most used first)")
+                            font.pixelSize: 16
+                            font.weight: Font.DemiBold
+                            color: "#f4f4f6"
+                        }
 
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "#1c1c22"
-                                border.color: "#2a2a33"
-                                border.width: 1
-                                radius: theme.radius
+                        ListView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            spacing: 8
+                            model: win.filteredApps()
 
-                                RowLayout {
+                            delegate: Item {
+                                required property var modelData
+                                width: ListView.view.width
+                                height: modelData.launches > 0 ? 60 : 50
+
+                                Rectangle {
                                     anchors.fill: parent
-                                    anchors.leftMargin: 14
-                                    anchors.rightMargin: 10
-                                    spacing: 14
+                                    color: "#1c1c22"
+                                    border.color: "#2a2a33"
+                                    border.width: 1
+                                    radius: theme.radius
 
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 6
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 14
+                                        anchors.rightMargin: 10
+                                        spacing: 14
 
-                                        RowLayout {
+                                        ColumnLayout {
                                             Layout.fillWidth: true
-                                            spacing: 8
-                                            Label {
-                                                text: modelData.name
-                                                font.pixelSize: 14
-                                                font.weight: Font.Medium
-                                                color: "#f4f4f6"
+                                            spacing: 5
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 8
+                                                Label {
+                                                    text: modelData.name
+                                                    font.pixelSize: 14
+                                                    font.weight: Font.Medium
+                                                    color: "#f4f4f6"
+                                                    elide: Text.ElideRight
+                                                }
+                                                Label {
+                                                    property string _lang: translator.language
+                                                    text: modelData.launches > 0
+                                                        ? qsTr("%n launches", "", modelData.launches)
+                                                        : (modelData.isRunning ? qsTr("Open now") : modelData.command)
+                                                    font.pixelSize: 12
+                                                    color: "#8e8e98"
+                                                    elide: Text.ElideRight
+                                                    Layout.fillWidth: true
+                                                }
                                             }
-                                            Label {
-                                                property string _lang: translator.language
-                                                text: modelData.launches > 0
-                                                    ? qsTr("%n launches", "", modelData.launches)
-                                                    : qsTr("Open now")
-                                                font.pixelSize: 12
-                                                color: "#8e8e98"
+
+                                            Rectangle {
+                                                visible: modelData.launches > 0
+                                                Layout.fillWidth: true
+                                                height: 6
+                                                color: "#121216"
+                                                radius: Math.min(3, theme.radius)
+
+                                                Rectangle {
+                                                    width: Math.max(8, parent.width * modelData.ratio)
+                                                    height: parent.height
+                                                    color: theme.accent
+                                                    radius: parent.radius
+                                                }
                                             }
-                                            Item { Layout.fillWidth: true }
                                         }
 
                                         Rectangle {
-                                            Layout.fillWidth: true
-                                            height: 6
+                                            visible: modelData.isBound
                                             color: "#121216"
-                                            radius: Math.min(3, theme.radius)
-
-                                            Rectangle {
-                                                width: Math.max(8, parent.width * modelData.ratio)
-                                                height: parent.height
-                                                color: theme.accent
-                                                radius: parent.radius
+                                            border.color: "#2e2e38"
+                                            border.width: 1
+                                            radius: Math.min(4, theme.radius)
+                                            implicitWidth: boundLbl.implicitWidth + 16
+                                            implicitHeight: 28
+                                            Label {
+                                                id: boundLbl
+                                                anchors.centerIn: parent
+                                                text: modelData.boundCombo
+                                                font.pixelSize: 11
+                                                font.family: "monospace"
+                                                color: "#c8c8d2"
                                             }
                                         }
-                                    }
 
-                                    Rectangle {
-                                        visible: modelData.isBound
-                                        color: "#121216"
-                                        border.color: "#2e2e38"
-                                        border.width: 1
-                                        radius: Math.min(4, theme.radius)
-                                        implicitWidth: boundLbl.implicitWidth + 16
-                                        implicitHeight: 28
-                                        Label {
-                                            id: boundLbl
-                                            anchors.centerIn: parent
-                                            text: modelData.boundCombo
-                                            font.pixelSize: 11
-                                            font.family: "monospace"
-                                            color: "#c8c8d2"
+                                        Rectangle {
+                                            color: modelData.isBound ? (rebindAppHover.hovered ? "#2a2a34" : "#22222a") : theme.accent
+                                            border.color: modelData.isBound ? "#343440" : "transparent"
+                                            border.width: modelData.isBound ? 1 : 0
+                                            radius: theme.radius
+                                            implicitHeight: 30
+                                            implicitWidth: appBindLbl.implicitWidth + 20
+                                            Label {
+                                                id: appBindLbl
+                                                anchors.centerIn: parent
+                                                text: modelData.isBound ? qsTr("Rebind") : qsTr("Bind")
+                                                font.pixelSize: 12
+                                                font.weight: modelData.isBound ? Font.Normal : Font.DemiBold
+                                                color: modelData.isBound ? "#d4d4dc" : theme.accentForeground
+                                            }
+                                            HoverHandler { id: rebindAppHover; cursorShape: Qt.PointingHandCursor }
+                                            TapHandler { onTapped: win.openBindDialog(modelData.suggestedCombo, modelData.name, modelData.command, true) }
                                         }
-                                    }
-
-                                    Button {
-                                        visible: !modelData.isBound
-                                        text: qsTr("Bind")
-                                        highlighted: true
-                                        Material.roundedScale: theme.radius
-                                        onClicked: win.openBindDialog(modelData.suggestedCombo, modelData.name, modelData.command, true)
                                     }
                                 }
                             }
-                        }
 
-                        Label {
-                            anchors.centerIn: parent
-                            visible: parent.count === 0
-                            text: qsTr("No app launch history detected in the last 30 days.")
-                            color: "#767680"
-                            font.pixelSize: 13
+                            Label {
+                                anchors.centerIn: parent
+                                visible: parent.count === 0
+                                text: qsTr("No matching apps found.")
+                                color: "#767680"
+                                font.pixelSize: 13
+                            }
                         }
                     }
                 }

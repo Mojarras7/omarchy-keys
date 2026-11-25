@@ -103,6 +103,29 @@ private slots:
         QCOMPARE(backend.findConflict("SUPER + SHIFT + Z"), QString("Zen Browser"));
     }
 
+    void listsAllInstalledAppsForSearch()
+    {
+        QTemporaryDir dir;
+        const QString bindingsLua = dir.filePath("bindings.lua");
+        write(bindingsLua, "");
+        write(dir.filePath("gimp.desktop"),
+              "[Desktop Entry]\nType=Application\nName=GIMP\nExec=gimp %U\n");
+
+        Backend::Config cfg;
+        cfg.bindingsLuaPath = bindingsLua;
+        cfg.defaultAppsLuaPath = dir.filePath("missing.lua");
+        cfg.desktopDirs = {dir.path()};
+        cfg.skipSystemCommands = true;
+
+        Backend backend(cfg);
+        backend.refresh();
+        QCOMPARE(backend.allApps().size(), 1);
+        const QVariantMap gimp = backend.allApps().first().toMap();
+        QCOMPARE(gimp.value("name").toString(), QString("GIMP"));
+        QCOMPARE(gimp.value("command").toString(), QString("gimp"));
+        QCOMPARE(gimp.value("suggestedCombo").toString(), QString("SUPER + SHIFT + G"));
+    }
+
     void themeFallsBack()
     {
         QTemporaryDir dir;

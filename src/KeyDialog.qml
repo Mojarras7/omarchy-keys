@@ -132,11 +132,64 @@ Dialog {
         }
 
         TextField {
+            id: labelField
             Layout.fillWidth: true
             text: root.descriptionValue
-            placeholderText: qsTr("Label (e.g. Zen Browser)")
+            placeholderText: qsTr("App or label (type to search installed apps)")
             Material.roundedScale: theme.radius
             onTextChanged: root.descriptionValue = text
+        }
+
+        // Quick-pick installed apps matching what the user typed
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+            property var matches: {
+                var q = root.descriptionValue.trim().toLowerCase()
+                if (q.length < 2) return []
+                var list = backend.allApps
+                var out = []
+                for (var i = 0; i < list.length && out.length < 5; ++i) {
+                    var app = list[i]
+                    if (app.name.toLowerCase().indexOf(q) !== -1 || app.command.toLowerCase().indexOf(q) !== -1) {
+                        if (app.name.toLowerCase() !== q || root.commandValue.trim().length === 0)
+                            out.push(app)
+                    }
+                }
+                return out
+            }
+            visible: matches.length > 0
+
+            Repeater {
+                model: parent.matches
+                delegate: Rectangle {
+                    required property var modelData
+                    color: pickHover.hovered ? "#2a2a34" : "#202028"
+                    border.color: "#343440"
+                    border.width: 1
+                    radius: Math.min(4, theme.radius)
+                    implicitWidth: pickLbl.implicitWidth + 16
+                    implicitHeight: 26
+
+                    Label {
+                        id: pickLbl
+                        anchors.centerIn: parent
+                        text: modelData.name + "  (" + modelData.command + ")"
+                        font.pixelSize: 11
+                        color: "#d4d4dc"
+                    }
+                    HoverHandler { id: pickHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        onTapped: {
+                            root.descriptionValue = modelData.name
+                            root.commandValue = modelData.command
+                            if (root.comboValue.trim().length === 0)
+                                root.comboValue = modelData.suggestedCombo
+                            root.launchMode = true
+                        }
+                    }
+                }
+            }
         }
 
         TextField {

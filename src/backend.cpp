@@ -729,26 +729,27 @@ void Backend::computeRecommendations(QList<BindingEntry> &entries, QList<Desktop
         m_unboundList.append(item);
     }
 
-    // Build Most Used Apps list.
+    // Build Most Used Apps list and All Installed Apps list (used first, then alphabetical).
     m_mostUsedList.clear();
+    m_allAppsList.clear();
     int maxLaunches = 1;
     for (const DesktopApp &app : apps)
         maxLaunches = qMax(maxLaunches, app.launches);
 
     for (const DesktopApp &app : apps) {
-        if (app.launches <= 0 && !app.isRunning)
-            continue;
         QVariantMap item;
         item["id"] = app.id;
         item["name"] = app.name;
         item["command"] = app.binary.isEmpty() ? app.exec : app.binary;
         item["launches"] = app.launches;
-        item["ratio"] = double(qMax(1, app.launches)) / double(maxLaunches);
+        item["ratio"] = app.launches > 0 ? double(app.launches) / double(maxLaunches) : 0.0;
         item["isRunning"] = app.isRunning;
         item["isBound"] = app.isBound;
         item["boundCombo"] = app.boundCombo;
         item["suggestedCombo"] = app.isBound ? app.boundCombo : suggestComboForName(app.name, usedCombos);
-        m_mostUsedList.append(item);
+        m_allAppsList.append(item);
+        if (app.launches > 0 || app.isRunning)
+            m_mostUsedList.append(item);
     }
 }
 
