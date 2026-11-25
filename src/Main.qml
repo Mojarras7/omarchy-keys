@@ -783,7 +783,7 @@ ApplicationWindow {
                                         text: qsTr("Rebind")
                                         flat: true
                                         Material.roundedScale: theme.radius
-                                        onClicked: win.openBindDialog(modelData.combo, modelData.description, "", true)
+                                        onClicked: win.openBindDialog(modelData.combo, modelData.description, modelData.command || "", modelData.isLaunch)
                                     }
 
                                     Button {

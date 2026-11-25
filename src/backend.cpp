@@ -213,6 +213,8 @@ ManagedState Backend::parseManagedBlock(const QString &luaContent) {
         R"re(o\.(bind|rebind)\("([^"]+)",\s*"([^"]*)",\s*\{\s*launch\s*=\s*"([^"]+)"\s*\}\))re");
     static const QRegularExpression bindCmdRe(
         R"re(o\.(bind|rebind)\("([^"]+)",\s*"([^"]*)",\s*"([^"]+)"\))re");
+    static const QRegularExpression bindLuaRe(
+        R"re(o\.(bind|rebind)\("([^"]+)",\s*"([^"]*)",\s*(hl\.dsp\.[^\n]+)\))re");
 
     const QStringList lines = block.split('\n');
     for (const QString &rawLine : lines) {
@@ -223,7 +225,7 @@ ManagedState Backend::parseManagedBlock(const QString &luaContent) {
                 state.unbinds.append(c);
         } else if (auto m = bindLaunchRe.match(line); m.hasMatch()) {
             ManagedBind b;
-            b.isRebind = (m.captured(1) == "rebind");
+            b.isRebind = true;
             b.combo = normalizeCombo(m.captured(2));
             b.description = m.captured(3);
             b.command = m.captured(4);
@@ -231,10 +233,18 @@ ManagedState Backend::parseManagedBlock(const QString &luaContent) {
             state.binds.append(b);
         } else if (auto m = bindCmdRe.match(line); m.hasMatch()) {
             ManagedBind b;
-            b.isRebind = (m.captured(1) == "rebind");
+            b.isRebind = true;
             b.combo = normalizeCombo(m.captured(2));
             b.description = m.captured(3);
             b.command = m.captured(4);
+            b.isLaunch = false;
+            state.binds.append(b);
+        } else if (auto m = bindLuaRe.match(line); m.hasMatch()) {
+            ManagedBind b;
+            b.isRebind = true;
+            b.combo = normalizeCombo(m.captured(2));
+            b.description = m.captured(3);
+            b.command = m.captured(4).trimmed();
             b.isLaunch = false;
             state.binds.append(b);
         }
@@ -266,13 +276,17 @@ QString Backend::writeManagedBlock(const QString &luaContent, const ManagedState
         blockLines << QStringLiteral("hl.unbind(\"%1\")").arg(luaEscape(combo));
     }
     for (const ManagedBind &b : state.binds) {
-        const QString fn = b.isRebind ? "o.rebind" : "o.bind";
+        // Always emit o.rebind so any existing default binding on the same
+        // chord is replaced cleanly instead of firing both actions.
         if (b.isLaunch) {
-            blockLines << QStringLiteral("%1(\"%2\", \"%3\", { launch = \"%4\" })")
-                              .arg(fn, luaEscape(b.combo), luaEscape(b.description), luaEscape(b.command));
+            blockLines << QStringLiteral("o.rebind(\"%1\", \"%2\", { launch = \"%3\" })")
+                              .arg(luaEscape(b.combo), luaEscape(b.description), luaEscape(b.command));
+        } else if (b.command.startsWith("hl.dsp.")) {
+            blockLines << QStringLiteral("o.rebind(\"%1\", \"%2\", %3)")
+                              .arg(luaEscape(b.combo), luaEscape(b.description), b.command);
         } else {
-            blockLines << QStringLiteral("%1(\"%2\", \"%3\", \"%4\")")
-                              .arg(fn, luaEscape(b.combo), luaEscape(b.description), luaEscape(b.command));
+            blockLines << QStringLiteral("o.rebind(\"%1\", \"%2\", \"%3\")")
+                              .arg(luaEscape(b.combo), luaEscape(b.description), luaEscape(b.command));
         }
     }
     blockLines << kMarkerEnd;
@@ -490,6 +504,30 @@ QList<BindingEntry> Backend::loadActiveBindings(const ManagedState &managed) con
     }
 
     if (ok && !output.trimmed().isEmpty()) {
+        // Read the latest keybindings records cache populated by
+        // `omarchy menu keybindings --print` so every binding carries its
+        // dispatcher and command/expression for rebinding.
+        QHash<QString, QPair<QString, QString>> recordActions;
+        QDir cacheDir(QDir::homePath() + "/.cache/omarchy");
+        const QFileInfoList recFiles = cacheDir.entryInfoList(
+            {"keybindings-*.records"}, QDir::Files, QDir::Time);
+        if (!recFiles.isEmpty()) {
+            QFile rf(recFiles.first().absoluteFilePath());
+            if (rf.open(QIODevice::ReadOnly)) {
+                for (const QString &rline : QString::fromUtf8(rf.readAll()).split('\n')) {
+                    const QStringList cols = rline.split('\t');
+                    if (cols.size() < 3)
+                        continue;
+                    const int arrow = cols[0].indexOf(QString::fromUtf8("→"));
+                    if (arrow <= 0)
+                        continue;
+                    const QString rcombo = normalizeCombo(cols[0].left(arrow).trimmed().section(" / ", 0, 0));
+                    if (!rcombo.isEmpty() && !recordActions.contains(rcombo))
+                        recordActions.insert(rcombo, {cols[1].trimmed(), cols[2].trimmed()});
+                }
+            }
+        }
+
         QSet<QString> seen;
         for (const QString &rawLine : output.split('\n')) {
             const QString line = rawLine.trimmed();
@@ -508,10 +546,15 @@ QList<BindingEntry> Backend::loadActiveBindings(const ManagedState &managed) con
             entry.combo = primaryCombo;
             entry.description = desc;
             entry.isProtected = isCoreBinding(desc, primaryCombo);
+            if (recordActions.contains(primaryCombo)) {
+                entry.dispatcher = recordActions.value(primaryCombo).first;
+                entry.arg = recordActions.value(primaryCombo).second;
+            }
             if (customByCombo.contains(primaryCombo)) {
                 entry.isCustom = true;
                 entry.isAppBinding = true;
                 entry.arg = customByCombo.value(primaryCombo).command;
+                entry.dispatcher = customByCombo.value(primaryCombo).isLaunch ? "launch" : "exec";
                 entry.appKey = canonicalAppToken(entry.arg.section(' ', 0, 0));
             } else if (defaultApps.contains(primaryCombo)) {
                 entry.isAppBinding = true;
@@ -715,6 +758,8 @@ void Backend::computeRecommendations(QList<BindingEntry> &entries, QList<Desktop
         QVariantMap item;
         item["combo"] = e.combo;
         item["description"] = e.description;
+        item["command"] = e.arg;
+        item["isLaunch"] = (e.dispatcher == "launch");
         item["isAppBinding"] = e.isAppBinding;
         item["isProtected"] = e.isProtected;
         item["isCustom"] = e.isCustom;

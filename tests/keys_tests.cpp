@@ -34,11 +34,14 @@ private slots:
         QVERIFY(written.contains("Personal comment"));
         QVERIFY(written.contains("voxtype"));
         QVERIFY(written.contains("hl.unbind(\"SUPER + SHIFT + X\")"));
-        QVERIFY(written.contains("o.bind(\"SUPER + SHIFT + Z\", \"Zen Browser\", { launch = \"zen-browser\" })"));
+        QVERIFY(written.contains("o.rebind(\"SUPER + SHIFT + Z\", \"Zen Browser\", { launch = \"zen-browser\" })"));
 
         const ManagedState parsed = Backend::parseManagedBlock(written);
         QCOMPARE(parsed.unbinds, state.unbinds);
-        QCOMPARE(parsed.binds, state.binds);
+        QCOMPARE(parsed.binds.size(), 1);
+        QCOMPARE(parsed.binds.first().combo, state.binds.first().combo);
+        QCOMPARE(parsed.binds.first().command, state.binds.first().command);
+        QCOMPARE(parsed.binds.first().isRebind, true);
     }
 
     void parsesJournalUsageAndRunningClasses()
